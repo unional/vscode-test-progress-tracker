@@ -76,7 +76,6 @@ class PassStats extends TreeItem {
 
     this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? '*' : ''}`
 
-    console.log(latest, last)
     const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numPassedTests / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
