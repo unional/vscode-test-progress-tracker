@@ -74,9 +74,9 @@ class PassStats extends TreeItem {
     super(`pass`);
     const result = full || latest
 
-    this.label = `${getBar(result.numPassedTests / result.numTotalTests)} passed${full !== latest ? '*' : ''}`
+    this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? '*' : ''}`
 
-    const emotion = getEmotion(latest.numPassedTests / latest.numTotalTests, last ? last.numPassedTests / last.numTotalTests : undefined)
+    const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numPassedTests / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
       dark: path.join(__filename, `../../resources/dark/${emotion}.svg`)
