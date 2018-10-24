@@ -1,0 +1,73 @@
+{
+  "name": "vscode-project-stats",
+  "version": "1.1.0",
+  "description": "Display project stats",
+  "homepage": "https://github.com/unional/test-progress-player/packages/vscode-project-stats#readme",
+  "bugs": {
+    "url": "https://github.com/unional/test-progress-player/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unional/test-progress-player.git"
+  },
+  "main": "./out/extension",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "lint": "tslint -p tsconfig.json src/**/*.ts",
+    "test": "npm run compile && cross-env CODE_TESTS_WORKSPACE=testProject && node ./node_modules/vscode/bin/test",
+    "vscode:prepublish": "npm run compile",
+    "watch": "node scripts/watch.js"
+  },
+  "dependencies": {
+    "@unional/test-progress-tracker": "^1.3.3",
+    "chalk": "^2.4.1",
+    "global-store": "^0.7.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.7",
+    "@types/node": "^10.12.0",
+    "@unional/jest-progress-reporter": "^1.0.0",
+    "assertron": "^5.2.0",
+    "cross-env": "^5.2.0",
+    "delay": "^4.1.0",
+    "jest": "^23.6.0",
+    "jest-audio-reporter": "^2.2.0",
+    "jest-environment-node": "^23.4.0",
+    "jest-junit": "^5.2.0",
+    "jest-watch-suspend": "^1.1.0",
+    "jest-watch-toggle-config": "^1.0.2",
+    "ts-jest": "^23.10.4",
+    "tslint": "^5.11.0",
+    "tslint-config-unional": "^0.10.0",
+    "typescript": "^3.1.3",
+    "vscode": "^1.1.21"
+  },
+  "engines": {
+    "vscode": "^1.25.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:progressTrackerTreeView"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "progressTracker.showGraph",
+        "title": "Progress Tracker: show graph"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "progressTrackerTreeView",
+          "name": "Progress Tracker"
+        }
+      ]
+    }
+  },
+  "displayName": "Progress Tracker",
+  "publisher": "unional"
+}
