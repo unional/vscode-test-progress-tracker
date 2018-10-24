@@ -1,4 +1,7 @@
 # VSCode Test Progress Tracker
 
-Should test progress.
+Alpha quality.
+
+Show test progress.
+
 Require `jest` and `jest-progress-reporter`

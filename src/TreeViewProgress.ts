@@ -175,7 +175,7 @@ class StatementCoverageStats extends TreeItem {
 }
 
 function getBar(percentage: number) {
-  const bar = `----------------------------------------`
+  const bar = `-----------------------------`
   const index = Math.floor(percentage * bar.length)
 
   return `[${bar.substr(0, index) + '|' + bar.substr(index + 1)}] ${(percentage * 100).toFixed(1)}% `
