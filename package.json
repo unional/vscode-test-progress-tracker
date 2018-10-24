@@ -1,6 +1,6 @@
 {
   "name": "vscode-test-progress-tracker",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Show Test Progress",
   "homepage": "https://github.com/unional/vscode-test-progress-tracker#readme",
   "bugs": {

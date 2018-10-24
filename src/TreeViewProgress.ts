@@ -99,8 +99,8 @@ class SkipStats extends TreeItem {
 
     this.label = `${getBar(result.numTotalTests - result.numPassedTests - result.numFailedTests / result.numTotalTests)} skipped${full !== latest ? '*' : ''}`
 
-    const emotion = getEmotion(1 - (latest.numTotalTests - latest.numPassedTests - latest.numFailedTests / latest.numTotalTests), last ?
-      1 - (last.numTotalTests - last.numPassedTests - last.numFailedTests / last.numTotalTests) : undefined)
+    const emotion = getEmotion(1 - ((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests), last ?
+      1 - ((last.numTotalTests - last.numPassedTests - last.numFailedTests) / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
       dark: path.join(__filename, `../../resources/dark/${emotion}.svg`)
