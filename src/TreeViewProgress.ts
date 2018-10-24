@@ -106,7 +106,7 @@ class BranchCoverageStats extends TreeItem {
   constructor(public readonly covered: TestResults | undefined, public readonly latest: TestResults) {
     super(`no branch coverage info`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.branches.covered / covered.coverage.branches.total)} branch${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.branches.covered / covered.coverage.branches.total || 0)} branch${covered !== latest ? '*' : ''} `
     }
   }
 
@@ -124,7 +124,7 @@ class FunctionCoverageStats extends TreeItem {
   constructor(public readonly covered: TestResults | undefined, public readonly latest: TestResults) {
     super(`no function coverage info`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total)} function${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total || 0)} function${covered !== latest ? '*' : ''} `
     }
   }
 
@@ -142,7 +142,7 @@ class LineCoverageStats extends TreeItem {
   constructor(public readonly covered: TestResults | undefined, public readonly latest: TestResults) {
     super(`no line coverage info`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.lines.covered / covered.coverage.lines.total)} line${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.lines.covered / covered.coverage.lines.total || 0)} line${covered !== latest ? '*' : ''} `
     }
   }
 
@@ -160,7 +160,7 @@ class StatementCoverageStats extends TreeItem {
   constructor(public readonly covered: TestResults | undefined, public readonly latest: TestResults) {
     super(`no statement coverage info`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.statements.covered / covered.coverage.statements.total)} statement${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.statements.covered / covered.coverage.statements.total || 0)} statement${covered !== latest ? '*' : ''} `
     }
   }
 
@@ -178,5 +178,5 @@ function getBar(percentage: number) {
   const bar = `-----------------------------`
   const index = Math.floor(percentage * bar.length)
 
-  return `[${bar.substr(0, index) + '|' + bar.substr(index + 1)}] ${(percentage * 100).toFixed(1)}% `
+  return `[${bar.substr(0, index) + '|' + bar.substr(index === 0 ? 0 : index + 1)}] ${(percentage * 100).toFixed(1)}% `
 }
