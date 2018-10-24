@@ -219,5 +219,5 @@ function getBar(percentage: number) {
   const bar = `-----------------------------`
   const index = Math.floor(percentage * bar.length)
 
-  return `[${bar.substr(0, index) + '|' + bar.substr(index === 0 ? 0 : index + 1)}] ${(percentage * 100).toFixed(1)}% `
+  return `[${bar.substr(0, index) + '|' + bar.substr(index < Number.EPSILON ? 0 : index + 1)}] ${(percentage * 100).toFixed(1)}% `
 }
