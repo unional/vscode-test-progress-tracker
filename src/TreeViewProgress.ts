@@ -53,7 +53,7 @@ export class TreeViewProgress implements TreeDataProvider<TreeItem> {
 }
 
 function getEmotion(pct: number, lastPct: number | undefined) {
-  if (lastPct === undefined || pct === lastPct) {
+  if (lastPct === undefined || Math.abs(pct - lastPct) < Number.EPSILON) {
     return pct === 1 ?
       'great' :
       pct >= .98 ?
@@ -76,6 +76,7 @@ class PassStats extends TreeItem {
 
     this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? '*' : ''}`
 
+    console.log(latest, last)
     const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numPassedTests / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
@@ -97,7 +98,7 @@ class SkipStats extends TreeItem {
     super(`skip`, TreeItemCollapsibleState.None);
     const result = full || latest
 
-    this.label = `${getBar(result.numTotalTests - result.numPassedTests - result.numFailedTests / result.numTotalTests)} skipped${full !== latest ? '*' : ''}`
+    this.label = `${getBar((result.numTotalTests - result.numPassedTests - result.numFailedTests) / result.numTotalTests)} skipped${full !== latest ? '*' : ''}`
 
     const emotion = getEmotion(1 - ((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests), last ?
       1 - ((last.numTotalTests - last.numPassedTests - last.numFailedTests) / last.numTotalTests) : undefined)
