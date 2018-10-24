@@ -54,7 +54,7 @@ export class TreeViewProgress implements TreeDataProvider<TreeItem> {
 
 function getEmotion(pct: number, lastPct: number | undefined) {
   if (lastPct === undefined || Math.abs(pct - lastPct) < Number.EPSILON) {
-    return pct === 1 ?
+    return Math.abs(pct - 1) < Number.EPSILON ?
       'great' :
       pct >= .98 ?
         'good' :
@@ -76,7 +76,7 @@ class PassStats extends TreeItem {
 
     this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? '*' : ''}`
 
-    const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numPassedTests / last.numTotalTests) : undefined)
+    const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numFailedTests / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
       dark: path.join(__filename, `../../resources/dark/${emotion}.svg`)
