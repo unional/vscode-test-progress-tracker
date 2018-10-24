@@ -12,7 +12,7 @@ export function onchange(context: Partial<MonitorContext & GetLastLineContext> &
   if (!monitoring) {
     monitoring = monitor(context, (err, testResults) => {
       if (err) {
-        context.showErrorMessage(`Monitoring progress error:`, err)
+        context.showErrorMessage(`Monitoring progress error: ${err}`)
       }
       else { listeners.forEach(l => l(testResults)) }
     })

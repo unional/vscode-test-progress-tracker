@@ -124,7 +124,7 @@ class FunctionCoverageStats extends TreeItem {
   constructor(public readonly covered: TestResults | undefined, public readonly latest: TestResults) {
     super(`no function coverage info`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = ` ${getBar(covered.coverage.functions.covered / covered.coverage.functions.total)} function${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total)} function${covered !== latest ? '*' : ''} `
     }
   }
 
