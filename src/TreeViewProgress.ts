@@ -1,46 +1,45 @@
 import path from 'path';
 import { TestResults } from 'test-progress-tracker';
 import { Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, window, workspace } from 'vscode';
+import { WorkspaceFolderTestSnapshot } from './interfaces';
 import { onchange } from './onchange';
-
-interface WorkspaceFolderTestResults {
-  latest: TestResults,
-  last?: TestResults,
-  full?: TestResults,
-  coverage?: TestResults
-}
+import { loadInitialSnapshot } from './loadInitialSnapshot';
 
 export class TreeViewProgress implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined> = new EventEmitter<TreeItem | undefined>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined> = this._onDidChangeTreeData.event;
-  private workspaceFolders: { [k: string]: WorkspaceFolderTestResults } = {}
+  private testSnapshots: { [k: string]: WorkspaceFolderTestSnapshot | undefined } = {}
+  private loading = true
   constructor() {
     if (workspace.workspaceFolders) {
-      workspace.workspaceFolders.forEach(folder => {
+      // tslint:disable-next-line: no-floating-promises
+      Promise.all(workspace.workspaceFolders.map(async folder => {
         const rootDir = folder.uri.fsPath
+        this.testSnapshots[rootDir] = await loadInitialSnapshot(rootDir)
         onchange({ showErrorMessage: window.showErrorMessage }, rootDir, testResults => {
-          this.workspaceFolders[rootDir] = {
+          this.testSnapshots[rootDir] = {
             latest: testResults,
-            last: this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].latest,
-            full: !testResults.filtered ? testResults : this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].full,
-            coverage: testResults.coverage ? testResults : this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].coverage
+            last: this.testSnapshots[rootDir] && this.testSnapshots[rootDir]!.latest,
+            full: !testResults.filtered ? testResults : this.testSnapshots[rootDir] && this.testSnapshots[rootDir]!.full,
+            coverage: testResults.coverage ? testResults : this.testSnapshots[rootDir] && this.testSnapshots[rootDir]!.coverage
           }
 
           this._onDidChangeTreeData.fire()
         })
-      })
+      })).then(() => this.loading = false)
     }
   }
 
   getTreeItem(element: TreeItem): TreeItem | Thenable<TreeItem> {
     return element
   }
+
   getChildren(element?: TreeItem | undefined): ProviderResult<TreeItem[]> {
     if (element) {
       if (workspace.workspaceFolders && workspace.workspaceFolders.length > 1) {
         const folder = workspace.workspaceFolders.find(f => f.name === element.label)
         if (folder) {
-          const testResults = this.workspaceFolders[folder.uri.fsPath]
+          const testResults = this.testSnapshots[folder.uri.fsPath]
           return Promise.resolve(testResults ? getTestResultsTree(testResults) : [new TreeItem('No test data available')])
         }
       }
@@ -51,8 +50,12 @@ export class TreeViewProgress implements TreeDataProvider<TreeItem> {
       return Promise.resolve([new TreeItem('Please open a folder or workspace')])
     }
 
+    if (this.loading) {
+      return Promise.resolve([new TreeItem('loading...')])
+    }
+
     if (workspace.workspaceFolders.length === 1) {
-      const testResults = this.workspaceFolders[workspace.workspaceFolders[0].uri.fsPath]
+      const testResults = this.testSnapshots[workspace.workspaceFolders[0].uri.fsPath]
       return Promise.resolve(testResults ? getTestResultsTree(testResults) : [new TreeItem('No test data available')])
     }
     else {
@@ -61,7 +64,7 @@ export class TreeViewProgress implements TreeDataProvider<TreeItem> {
   }
 }
 
-function getTestResultsTree({ coverage, full, last, latest }: WorkspaceFolderTestResults) {
+function getTestResultsTree({ coverage, full, last, latest }: WorkspaceFolderTestSnapshot) {
   return [
     new PassStats(full, latest, last),
     new SkipStats(full, latest, last),
@@ -78,11 +81,11 @@ class PassStats extends TreeItem {
     public readonly last: TestResults | undefined,
   ) {
     super(`no pass data available`);
-    const result = full || latest
+    this.label = `${getBar(1 - (latest.numFailedTests / latest.numTotalTests))} passed${full !== latest && latest.filtered ? ' (filtered)' : ''}`
 
-    this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? ' (outdated)' : ''}`
-
-    const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numFailedTests / last.numTotalTests) : undefined)
+    const emotion = getEmotion(
+      1 - (latest.numFailedTests / latest.numTotalTests),
+      last && !last.filtered && !latest.filtered ? 1 - (last.numFailedTests / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
       dark: path.join(__filename, `../../resources/dark/${emotion}.svg`)
@@ -101,12 +104,12 @@ class SkipStats extends TreeItem {
     public readonly last: TestResults | undefined,
   ) {
     super(`no skip data available`);
-    const result = full || latest
+    this.label = `${getBar((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests)} skipped${full !== latest && latest.filtered ? ' (filtered)' : ''}`
 
-    this.label = `${getBar((result.numTotalTests - result.numPassedTests - result.numFailedTests) / result.numTotalTests)} skipped${full !== latest ? ' (outdated)' : ''}`
-
-    const emotion = getEmotion(1 - ((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests), last ?
-      1 - ((last.numTotalTests - last.numPassedTests - last.numFailedTests) / last.numTotalTests) : undefined)
+    const emotion = getEmotion(
+      1 - ((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests),
+      last && !last.filtered && !latest.filtered ?
+        1 - ((last.numTotalTests - last.numPassedTests - last.numFailedTests) / last.numTotalTests) : undefined)
     this.iconPath = {
       light: path.join(__filename, `../../resources/light/${emotion}.svg`),
       dark: path.join(__filename, `../../resources/dark/${emotion}.svg`)
@@ -128,7 +131,7 @@ class BranchCoverageStats extends TreeItem {
     if (covered && covered.coverage) {
       this.label = `${getBar(covered.coverage.branches.covered / covered.coverage.branches.total || 0)} branch${covered !== latest ? ' (outdated)' : ''} `
 
-      const emotion = getEmotion(covered.coverage.branches.covered / covered.coverage.branches.total, last && last.coverage ?
+      const emotion = getEmotion(covered.coverage.branches.covered / covered.coverage.branches.total, covered === latest && last && last.coverage ?
         last.coverage.branches.covered / last.coverage.branches.total : undefined)
       this.iconPath = {
         light: path.join(__filename, `../../resources/light/${emotion}.svg`),
@@ -152,7 +155,7 @@ class FunctionCoverageStats extends TreeItem {
     if (covered && covered.coverage) {
       this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total || 0)} function${covered !== latest ? ' (outdated)' : ''} `
 
-      const emotion = getEmotion(covered.coverage.functions.covered / covered.coverage.functions.total, last && last.coverage ?
+      const emotion = getEmotion(covered.coverage.functions.covered / covered.coverage.functions.total, covered === latest && last && last.coverage ?
         last.coverage.functions.covered / last.coverage.functions.total : undefined)
       this.iconPath = {
         light: path.join(__filename, `../../resources/light/${emotion}.svg`),
@@ -176,7 +179,7 @@ class LineCoverageStats extends TreeItem {
     if (covered && covered.coverage) {
       this.label = `${getBar(covered.coverage.lines.covered / covered.coverage.lines.total || 0)} line${covered !== latest ? ' (outdated)' : ''} `
 
-      const emotion = getEmotion(covered.coverage.lines.covered / covered.coverage.lines.total, last && last.coverage ?
+      const emotion = getEmotion(covered.coverage.lines.covered / covered.coverage.lines.total, covered === latest && last && last.coverage ?
         last.coverage.lines.covered / last.coverage.lines.total : undefined)
       this.iconPath = {
         light: path.join(__filename, `../../resources/light/${emotion}.svg`),
@@ -201,7 +204,7 @@ class StatementCoverageStats extends TreeItem {
     if (covered && covered.coverage) {
       this.label = `${getBar(covered.coverage.statements.covered / covered.coverage.statements.total || 0)} statement${covered !== latest ? ' (outdated)' : ''} `
 
-      const emotion = getEmotion(covered.coverage.statements.covered / covered.coverage.statements.total, last && last.coverage ?
+      const emotion = getEmotion(covered.coverage.statements.covered / covered.coverage.statements.total, covered === latest && last && last.coverage ?
         last.coverage.statements.covered / last.coverage.statements.total : undefined)
       this.iconPath = {
         light: path.join(__filename, `../../resources/light/${emotion}.svg`),
@@ -216,7 +219,7 @@ class StatementCoverageStats extends TreeItem {
 }
 
 function getBar(percentage: number) {
-  const bar = `-----------------------------`
+  const bar = `---------------------`
   const index = Math.floor(percentage * bar.length)
 
   return `[${bar.substr(0, index) + '|' + bar.substr(index < Number.EPSILON ? 0 : index + 1)}] ${(percentage * 100).toFixed(1)}% `

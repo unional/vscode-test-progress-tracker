@@ -11,12 +11,13 @@ const testDirectory = path.resolve(__dirname, '../..');
 const jestConfig = {
   // rootDir: srcRootDir,
   // transform: JSON.stringify({ "^.+\\.ts$": "ts-jest" }),
-  runInBand: true // Required due to the way the "vscode" module is injected.
+  runInBand: true, // Required due to the way the "vscode" module is injected.
   // testRegex: "\\.spec\\.ts$",
   // testEnvironment: fromConfigDir("jest-vscode-environment.js"),
   // setupTestFrameworkScriptFile: fromConfigDir("jest-vscode-framework-setup.js"),
   // moduleFileExtensions: ["ts", "js", "json"],
   // globals: JSON.stringify({ "ts-jest": { tsConfigFile: "../tsconfig.json" } }),
+  watch: true
 };
 
 export async function run(_testRoot: string, callback: TestRunnerCallback) {
@@ -30,7 +31,6 @@ export async function run(_testRoot: string, callback: TestRunnerCallback) {
   try {
     const { globalConfig, results } = await runCLI(jestConfig, [testDirectory]);
     const failures = collectTestFailureMessages(results);
-
     if (failures.length > 0) {
       console.log('globalConfig:', globalConfig); // tslint:disable-line:no-console
       callback(null, failures);

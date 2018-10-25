@@ -15,9 +15,9 @@
     "compile": "tsc -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "lint": "tslint -p tsconfig.json src/**/*.ts",
-    "test": "npm run compile && cross-env CODE_TESTS_WORKSPACE=testProject && node ./node_modules/vscode/bin/test",
+    "test": "npm run compile && node ./node_modules/vscode/bin/test",
     "vscode:prepublish": "npm run compile",
-    "watch": "node scripts/watch.js"
+    "watch": "jest --watch"
   },
   "dependencies": {
     "test-progress-tracker": "^2.0.2"
