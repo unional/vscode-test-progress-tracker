@@ -1,21 +1,35 @@
-import { GetLastLineContext, monitor, MonitorContext, TestResults, MonitorSubscription } from '@unional/test-progress-tracker';
+import { monitor, MonitorSubscription, TestResults } from 'test-progress-tracker';
 
-let monitoring: MonitorSubscription
+let set = new Map<string, {
+  subscription: MonitorSubscription,
+  listeners: ((testResults: TestResults) => void)[]
+}>()
 
 export interface OnChangeContext {
   showErrorMessage(message: string, ...items: any[]): any
 }
 
-const listeners: ((testResults: TestResults) => void)[] = []
-export function onchange(context: Partial<MonitorContext & GetLastLineContext> & OnChangeContext, listener: (testResults: TestResults) => void) {
-  listeners.push(listener)
-  if (!monitoring) {
-    monitoring = monitor(context, (err, testResults) => {
+export function onchange(context: OnChangeContext, rootDir: string, listener: (testResults: TestResults) => void) {
+  let entry = set.get(rootDir)
+
+  if (!entry) {
+    const listeners = [listener]
+    const subscription = monitor({ rootDir }, (err, testResults) => {
       if (err) {
         context.showErrorMessage(`Monitoring progress error: ${err}`)
       }
-      else { listeners.forEach(l => l(testResults)) }
+      else {
+        const e = set.get(rootDir)
+        if (e) {
+          e.listeners.forEach(l => l(testResults))
+        }
+      }
     })
+    entry = { subscription, listeners }
+    set.set(rootDir, entry)
   }
-  return monitoring
+  else {
+    entry.listeners.push(listener)
+  }
+  return entry.subscription
 }

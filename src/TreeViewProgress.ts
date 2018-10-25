@@ -1,30 +1,35 @@
-import { TestResults } from '@unional/test-progress-tracker';
 import path from 'path';
+import { TestResults } from 'test-progress-tracker';
 import { Event, EventEmitter, ProviderResult, TreeDataProvider, TreeItem, TreeItemCollapsibleState, window, workspace } from 'vscode';
 import { onchange } from './onchange';
+
+interface WorkspaceFolderTestResults {
+  latest: TestResults,
+  last?: TestResults,
+  full?: TestResults,
+  coverage?: TestResults
+}
 
 export class TreeViewProgress implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<TreeItem | undefined> = new EventEmitter<TreeItem | undefined>();
   readonly onDidChangeTreeData: Event<TreeItem | undefined> = this._onDidChangeTreeData.event;
-  private latestResults: TestResults
-  private lastCoverageResults: TestResults | undefined
-  private lastFullResults: TestResults | undefined
-  private lastResults: TestResults | undefined
+  private workspaceFolders: { [k: string]: WorkspaceFolderTestResults } = {}
   constructor() {
-    // TODO: get active file and use `workspace.getWorkspaceFolder(uri)` to get the active folder, and monitor it.
-    // Close the last subscription too.
-    if (workspace.workspaceFolders && workspace.workspaceFolders[0])
-      onchange({ rootDir: workspace.workspaceFolders[0].uri.fsPath, showErrorMessage: window.showErrorMessage }, testResults => {
-        this.lastResults = this.latestResults
-        this.latestResults = testResults
-        if (testResults.coverage) {
-          this.lastCoverageResults = testResults
-        }
-        if (!testResults.filtered) {
-          this.lastFullResults = testResults
-        }
-        this._onDidChangeTreeData.fire()
+    if (workspace.workspaceFolders) {
+      workspace.workspaceFolders.forEach(folder => {
+        const rootDir = folder.uri.fsPath
+        onchange({ showErrorMessage: window.showErrorMessage }, rootDir, testResults => {
+          this.workspaceFolders[rootDir] = {
+            latest: testResults,
+            last: this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].latest,
+            full: !testResults.filtered ? testResults : this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].full,
+            coverage: testResults.coverage ? testResults : this.workspaceFolders[rootDir] && this.workspaceFolders[rootDir].coverage
+          }
+
+          this._onDidChangeTreeData.fire()
+        })
       })
+    }
   }
 
   getTreeItem(element: TreeItem): TreeItem | Thenable<TreeItem> {
@@ -32,49 +37,50 @@ export class TreeViewProgress implements TreeDataProvider<TreeItem> {
   }
   getChildren(element?: TreeItem | undefined): ProviderResult<TreeItem[]> {
     if (element) {
+      if (workspace.workspaceFolders && workspace.workspaceFolders.length > 1) {
+        const folder = workspace.workspaceFolders.find(f => f.name === element.label)
+        if (folder) {
+          const testResults = this.workspaceFolders[folder.uri.fsPath]
+          return Promise.resolve(testResults ? getTestResultsTree(testResults) : [new TreeItem('No test data available')])
+        }
+      }
       return Promise.resolve([])
     }
 
-    if (!this.latestResults) {
-      return Promise.resolve([
-        new NoStats()
-      ])
+    if (!workspace.workspaceFolders) {
+      return Promise.resolve([new TreeItem('Please open a folder or workspace')])
     }
 
-    return Promise.resolve([
-      new PassStats(this.lastFullResults, this.latestResults, this.lastResults),
-      new SkipStats(this.lastFullResults, this.latestResults, this.lastResults),
-      new StatementCoverageStats(this.lastCoverageResults, this.latestResults, this.lastResults),
-      new BranchCoverageStats(this.lastCoverageResults, this.latestResults, this.lastResults),
-      new FunctionCoverageStats(this.lastCoverageResults, this.latestResults, this.lastResults),
-      new LineCoverageStats(this.lastCoverageResults, this.latestResults, this.lastResults),
-    ])
+    if (workspace.workspaceFolders.length === 1) {
+      const testResults = this.workspaceFolders[workspace.workspaceFolders[0].uri.fsPath]
+      return Promise.resolve(testResults ? getTestResultsTree(testResults) : [new TreeItem('No test data available')])
+    }
+    else {
+      return Promise.resolve(workspace.workspaceFolders.map(f => new TreeItem(f.name, TreeItemCollapsibleState.Collapsed)))
+    }
   }
 }
 
-function getEmotion(pct: number, lastPct: number | undefined) {
-  if (lastPct === undefined || Math.abs(pct - lastPct) < Number.EPSILON) {
-    return Math.abs(pct - 1) < Number.EPSILON ?
-      'great' :
-      pct >= .98 ?
-        'good' :
-        pct >= 80 ?
-          'meh' :
-          'bad'
-  }
-  return pct > lastPct ? 'up' : 'down'
+function getTestResultsTree({ coverage, full, last, latest }: WorkspaceFolderTestResults) {
+  return [
+    new PassStats(full, latest, last),
+    new SkipStats(full, latest, last),
+    new StatementCoverageStats(coverage, latest, last),
+    new BranchCoverageStats(coverage, latest, last),
+    new FunctionCoverageStats(coverage, latest, last),
+    new LineCoverageStats(coverage, latest, last),
+  ]
 }
-
 class PassStats extends TreeItem {
   constructor(
     public readonly full: TestResults | undefined,
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`pass`);
+    super(`no pass data available`);
     const result = full || latest
 
-    this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? '*' : ''}`
+    this.label = `${getBar(1 - (result.numFailedTests / result.numTotalTests))} passed${full !== latest ? ' (outdated)' : ''}`
 
     const emotion = getEmotion(1 - (latest.numFailedTests / latest.numTotalTests), last ? 1 - (last.numFailedTests / last.numTotalTests) : undefined)
     this.iconPath = {
@@ -94,10 +100,10 @@ class SkipStats extends TreeItem {
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`skip`, TreeItemCollapsibleState.None);
+    super(`no skip data available`);
     const result = full || latest
 
-    this.label = `${getBar((result.numTotalTests - result.numPassedTests - result.numFailedTests) / result.numTotalTests)} skipped${full !== latest ? '*' : ''}`
+    this.label = `${getBar((result.numTotalTests - result.numPassedTests - result.numFailedTests) / result.numTotalTests)} skipped${full !== latest ? ' (outdated)' : ''}`
 
     const emotion = getEmotion(1 - ((latest.numTotalTests - latest.numPassedTests - latest.numFailedTests) / latest.numTotalTests), last ?
       1 - ((last.numTotalTests - last.numPassedTests - last.numFailedTests) / last.numTotalTests) : undefined)
@@ -112,21 +118,15 @@ class SkipStats extends TreeItem {
   }
 }
 
-class NoStats extends TreeItem {
-  constructor() {
-    super(`no progress data`, TreeItemCollapsibleState.None);
-  }
-}
-
 class BranchCoverageStats extends TreeItem {
   constructor(
     public readonly covered: TestResults | undefined,
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`no branch coverage info`, TreeItemCollapsibleState.None);
+    super(`no branch coverage info available`);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.branches.covered / covered.coverage.branches.total || 0)} branch${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.branches.covered / covered.coverage.branches.total || 0)} branch${covered !== latest ? ' (outdated)' : ''} `
 
       const emotion = getEmotion(covered.coverage.branches.covered / covered.coverage.branches.total, last && last.coverage ?
         last.coverage.branches.covered / last.coverage.branches.total : undefined)
@@ -148,9 +148,9 @@ class FunctionCoverageStats extends TreeItem {
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`no function coverage info`, TreeItemCollapsibleState.None);
+    super(`no function coverage info available`);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total || 0)} function${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.functions.covered / covered.coverage.functions.total || 0)} function${covered !== latest ? ' (outdated)' : ''} `
 
       const emotion = getEmotion(covered.coverage.functions.covered / covered.coverage.functions.total, last && last.coverage ?
         last.coverage.functions.covered / last.coverage.functions.total : undefined)
@@ -172,9 +172,9 @@ class LineCoverageStats extends TreeItem {
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`no line coverage info`, TreeItemCollapsibleState.None);
+    super(`no line coverage info available`);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.lines.covered / covered.coverage.lines.total || 0)} line${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.lines.covered / covered.coverage.lines.total || 0)} line${covered !== latest ? ' (outdated)' : ''} `
 
       const emotion = getEmotion(covered.coverage.lines.covered / covered.coverage.lines.total, last && last.coverage ?
         last.coverage.lines.covered / last.coverage.lines.total : undefined)
@@ -197,9 +197,9 @@ class StatementCoverageStats extends TreeItem {
     public readonly latest: TestResults,
     public readonly last: TestResults | undefined,
   ) {
-    super(`no statement coverage info`, TreeItemCollapsibleState.None);
+    super(`no statement coverage info available`, TreeItemCollapsibleState.None);
     if (covered && covered.coverage) {
-      this.label = `${getBar(covered.coverage.statements.covered / covered.coverage.statements.total || 0)} statement${covered !== latest ? '*' : ''} `
+      this.label = `${getBar(covered.coverage.statements.covered / covered.coverage.statements.total || 0)} statement${covered !== latest ? ' (outdated)' : ''} `
 
       const emotion = getEmotion(covered.coverage.statements.covered / covered.coverage.statements.total, last && last.coverage ?
         last.coverage.statements.covered / last.coverage.statements.total : undefined)
@@ -220,4 +220,17 @@ function getBar(percentage: number) {
   const index = Math.floor(percentage * bar.length)
 
   return `[${bar.substr(0, index) + '|' + bar.substr(index < Number.EPSILON ? 0 : index + 1)}] ${(percentage * 100).toFixed(1)}% `
+}
+
+function getEmotion(pct: number, lastPct: number | undefined) {
+  if (lastPct === undefined || Math.abs(pct - lastPct) < Number.EPSILON) {
+    return Math.abs(pct - 1) < Number.EPSILON ?
+      'great' :
+      pct >= .98 ?
+        'good' :
+        pct >= 80 ?
+          'meh' :
+          'bad'
+  }
+  return pct > lastPct ? 'up' : 'down'
 }

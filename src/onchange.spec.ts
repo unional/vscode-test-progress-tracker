@@ -1,5 +1,5 @@
-import { init, TestResults } from '@unional/test-progress-tracker';
-import a from 'assertron'
+import a from 'assertron';
+import { init, TestResults } from 'test-progress-tracker';
 import { onchange } from './onchange';
 
 test('notified with initial results', async () => {
@@ -8,7 +8,7 @@ test('notified with initial results', async () => {
   try {
     init({ rootDir })
     let actual = await new Promise(a => {
-      sub = onchange({ rootDir, showErrorMessage: () => { return } }, testResults => a(testResults))
+      sub = onchange({ showErrorMessage: () => { return } }, rootDir, testResults => a(testResults))
     })
 
     a.satisfy(actual, singleTest)
