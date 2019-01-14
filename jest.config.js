@@ -7,7 +7,7 @@ module.exports = {
   },
   'reporters': [
     'default',
-    // 'jest-progress-tracker',
+    'jest-progress-tracker',
     ['jest-audio-reporter', { volume: 0.3 }],
   ],
   'roots': [

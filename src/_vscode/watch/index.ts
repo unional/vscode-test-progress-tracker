@@ -1,23 +1,15 @@
 /**
  * Wires in Jest as the test runner in place of the default Mocha.
  */
-import { ResultsObject, runCLI } from 'jest';
+import { runCLI, TestRunnerCallback } from 'jest';
 import path from 'path';
 import sourceMapSupport from 'source-map-support';
+import { forwardStdoutStderrStreams } from '../forwardStdoutStderrStreams';
+import { jestConfig } from '../jest-test-runner';
 
-const fromConfigDir = (filename: string) => path.resolve(__dirname, '../jest-test-runner', filename);
 
-const jestConfig = {
-  presets: 'ts-jest',
-  runInBand: true, // Required due to the way the "vscode" module is injected.
-  testMatch: ['**/*.(system|unit).ts'],
-  testEnvironment: fromConfigDir('jest-vscode-environment.js'),
-  setupTestFrameworkScriptFile: fromConfigDir('jest-vscode-framework-setup.js'),
-  watch: true
-};
-
-let running: Promise<any>
-export async function run(testRoot: string, callback: TestRunnerCallback) {
+let running = runCLI({ ...jestConfig, watch: true }, [path.resolve(__dirname, '../..')])
+export async function run(_testRoot: string, callback: TestRunnerCallback) {
   // Enable source map support. This is done in the original Mocha test runner,
   // so do it here. It is not clear if this is having any effect.
   sourceMapSupport.install();
@@ -26,45 +18,9 @@ export async function run(testRoot: string, callback: TestRunnerCallback) {
   forwardStdoutStderrStreams();
 
   try {
-    if (!running) {
-      console.info('ohhhh')
-      running = runCLI(jestConfig, [path.resolve(testRoot, '../..')])
-    }
     await running
   }
   catch (e) {
     callback(e);
   }
 }
-
-/**
- * Collect failure messages from Jest test results.
- *
- * @param results Jest test results.
- */
-function collectTestFailureMessages(results: ResultsObject): string[] {
-  const failures = results.testResults.reduce<string[]>((acc, testResult) => {
-    if (testResult.failureMessage) acc.push(testResult.failureMessage);
-    return acc;
-  }, []);
-
-  return failures;
-}
-
-/**
- * Forward writes to process.stdout and process.stderr to console.log.
- *
- * For some reason this seems to be required for the Jest output to be streamed
- * to the Debug Console.
- */
-function forwardStdoutStderrStreams() {
-  const logger = (line: string) => {
-    console.log(line); // tslint:disable-line:no-console
-    return true;
-  };
-
-  process.stdout.write = logger;
-  process.stderr.write = logger;
-}
-
-export type TestRunnerCallback = (error: Error | null, failures?: any) => void;

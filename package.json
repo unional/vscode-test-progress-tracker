@@ -21,7 +21,7 @@
     "watch": "jest --watch"
   },
   "dependencies": {
-    "progress-str": "^3.3.1",
+    "progress-str": "^3.4.0",
     "test-progress-tracker": "^2.0.2"
   },
   "devDependencies": {

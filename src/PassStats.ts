@@ -11,8 +11,8 @@ export class PassStats extends TreeItem {
     public readonly last: TestResults | undefined,
   ) {
     super(`no pass data available`);
-    const bar = progressBar({ value: { max: latest.numTotalTests } })
-    this.label = `${bar.render(latest.numTotalTests - latest.numFailedTests)} passed${full !== latest && latest.filtered ? ' (filtered)' : ''}`
+    const bar = progressBar({ value: [{ max: latest.numTotalTests, textStyle: 'number' }, { max: full && full.numTotalTests, textStyle: 'ratio' }] })
+    this.label = `${bar.render(getNumPassed(latest), getNumPassed(full))} passed${full !== latest && latest.filtered ? ' (filtered)' : ''}`
 
     const emotion = getEmotion(
       1 - (latest.numFailedTests / latest.numTotalTests),
@@ -26,4 +26,8 @@ export class PassStats extends TreeItem {
   get tooltip(): string {
     return this.full !== this.latest ? 'latest test run is filtered, remove filter to see updated full report' : ''
   }
+}
+
+function getNumPassed(result: TestResults | undefined) {
+  return result ? result.numTotalTests - result.numFailedTests : undefined
 }

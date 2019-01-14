@@ -1,22 +1,12 @@
 /**
  * Wires in Jest as the test runner in place of the default Mocha.
  */
-import { ResultsObject, runCLI } from 'jest';
+import { ResultsObject, runCLI, TestRunnerCallback } from 'jest';
 import path from 'path';
 import sourceMapSupport from 'source-map-support';
+import { forwardStdoutStderrStreams } from '../forwardStdoutStderrStreams';
+import { jestConfig } from '../jest-test-runner';
 
-const fromConfigDir = (filename: string) => path.resolve(__dirname, '../jest-test-runner', filename);
-
-const jestConfig = {
-  presets: 'ts-jest',
-  runInBand: true, // Required due to the way the "vscode" module is injected.
-  testMatch: ['**/*.system.ts'],
-  testEnvironment: fromConfigDir('jest-vscode-environment.js'),
-  setupTestFrameworkScriptFile: fromConfigDir('jest-vscode-framework-setup.js'),
-  // watch: true
-};
-
-// let running: Promise<any>
 export async function run(testRoot: string, callback: TestRunnerCallback) {
   // Enable source map support. This is done in the original Mocha test runner,
   // so do it here. It is not clear if this is having any effect.
@@ -26,16 +16,14 @@ export async function run(testRoot: string, callback: TestRunnerCallback) {
   forwardStdoutStderrStreams();
 
   try {
-    // if (!running) running = runCLI(jestConfig, [testDirectory])
     const { globalConfig, results } = await runCLI(jestConfig, [path.resolve(testRoot, '../..')])
     const failures = collectTestFailureMessages(results);
     if (failures.length > 0) {
       console.info('globalConfig:', globalConfig);
       callback(null, failures);
-      return;
     }
-
-    callback(null);
+    else
+      callback(null);
   }
   catch (e) {
     callback(e);
@@ -55,21 +43,3 @@ function collectTestFailureMessages(results: ResultsObject): string[] {
 
   return failures;
 }
-
-/**
- * Forward writes to process.stdout and process.stderr to console.log.
- *
- * For some reason this seems to be required for the Jest output to be streamed
- * to the Debug Console.
- */
-function forwardStdoutStderrStreams() {
-  const logger = (line: string) => {
-    console.log(line); // tslint:disable-line:no-console
-    return true;
-  };
-
-  process.stdout.write = logger;
-  process.stderr.write = logger;
-}
-
-export type TestRunnerCallback = (error: Error | null, failures?: any) => void;

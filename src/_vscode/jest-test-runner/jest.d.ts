@@ -16,6 +16,7 @@ declare module 'jest' {
       failureMessage?: string;
     }[];
   }
+  export type TestRunnerCallback = (error: Error | null, failures?: any) => void;
 }
 
 declare module 'jest-environment-node' {
