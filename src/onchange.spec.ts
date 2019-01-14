@@ -11,10 +11,10 @@ test('notified with initial results', async () => {
       sub = onchange({ showErrorMessage: () => { return } }, rootDir, testResults => a(testResults))
     })
 
-    a.satisfy(actual, singleTest)
+    a.satisfies(actual, singleTest)
   }
   finally {
-    sub.close()
+    if (sub) sub.close()
   }
 })
 

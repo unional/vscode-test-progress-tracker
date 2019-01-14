@@ -16,7 +16,7 @@
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
-            "preLaunchTask": "npm: watch"
+            "preLaunchTask": "npm: compile:watch"
         },
         {
             "name": "Extension Tests",
@@ -25,12 +25,26 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionTestsPath=${workspaceFolder}/out/test"
+                "--extensionTestsPath=${workspaceFolder}/out/_vscode/test"
             ],
             "outFiles": [
                 "${workspaceFolder}/out/test/**/*.js"
             ],
-            "preLaunchTask": "npm: watch"
-        }
-    ]
+            "preLaunchTask": "npm: compile:watch"
+        },
+        {
+          "name": "Extension Test Watch",
+          "type": "extensionHost",
+          "request": "launch",
+          "runtimeExecutable": "${execPath}",
+          "args": [
+              "--extensionDevelopmentPath=${workspaceFolder}",
+              "--extensionTestsPath=${workspaceFolder}/out/_vscode/watch"
+          ],
+          "outFiles": [
+              "${workspaceFolder}/out/test/**/*.js"
+          ],
+          "preLaunchTask": "npm: compile:watch"
+      }
+  ]
 }

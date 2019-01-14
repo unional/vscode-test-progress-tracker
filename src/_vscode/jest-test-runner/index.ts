@@ -5,22 +5,19 @@ import { ResultsObject, runCLI } from 'jest';
 import path from 'path';
 import sourceMapSupport from 'source-map-support';
 
-const testDirectory = path.resolve(__dirname, '../..');
-// const fromConfigDir = (filename: string) => path.resolve(__dirname, filename);
+const fromConfigDir = (filename: string) => path.resolve(__dirname, filename);
 
 const jestConfig = {
-  // rootDir: srcRootDir,
-  // transform: JSON.stringify({ "^.+\\.ts$": "ts-jest" }),
+  presets: 'ts-jest',
   runInBand: true, // Required due to the way the "vscode" module is injected.
-  // testRegex: "\\.spec\\.ts$",
-  // testEnvironment: fromConfigDir("jest-vscode-environment.js"),
-  // setupTestFrameworkScriptFile: fromConfigDir("jest-vscode-framework-setup.js"),
-  // moduleFileExtensions: ["ts", "js", "json"],
-  // globals: JSON.stringify({ "ts-jest": { tsConfigFile: "../tsconfig.json" } }),
-  watch: true
+  testMatch: ['**/*.system.ts'],
+  testEnvironment: fromConfigDir('jest-vscode-environment.js'),
+  setupTestFrameworkScriptFile: fromConfigDir('jest-vscode-framework-setup.js'),
+  // watch: true
 };
 
-export async function run(_testRoot: string, callback: TestRunnerCallback) {
+// let running: Promise<any>
+export async function run(testRoot: string, callback: TestRunnerCallback) {
   // Enable source map support. This is done in the original Mocha test runner,
   // so do it here. It is not clear if this is having any effect.
   sourceMapSupport.install();
@@ -29,10 +26,11 @@ export async function run(_testRoot: string, callback: TestRunnerCallback) {
   forwardStdoutStderrStreams();
 
   try {
-    const { globalConfig, results } = await runCLI(jestConfig, [testDirectory]);
+    // if (!running) running = runCLI(jestConfig, [testDirectory])
+    const { globalConfig, results } = await runCLI(jestConfig, [path.resolve(testRoot, '../..')])
     const failures = collectTestFailureMessages(results);
     if (failures.length > 0) {
-      console.log('globalConfig:', globalConfig); // tslint:disable-line:no-console
+      console.info('globalConfig:', globalConfig);
       callback(null, failures);
       return;
     }

@@ -8,7 +8,7 @@ declare module 'jest' {
    */
   export function runCLI(
     jestConfig: object,
-    projects: string[]
+    projects?: string[]
   ): Promise<{ globalConfig: object; results: ResultsObject }>;
 
   export interface ResultsObject {
@@ -27,12 +27,5 @@ declare module 'jest-environment-node' {
     public setup(): Promise<void>;
     public teardown(): Promise<void>;
     public runScript(script: any): any;
-  }
-}
-
-/* tslint:disable-next-line:no-namespace */
-declare namespace NodeJS {
-  interface Global {
-    vscode: any;
   }
 }

@@ -1,14 +1,15 @@
-import a from 'assertron'
+import t from 'assert';
+import a from 'assertron';
 import { loadInitialSnapshot } from './loadInitialSnapshot';
 
 test('folder without .progress will return undefined', async () => {
   const actual = await loadInitialSnapshot(getRootDir('no-result'))
-  a.deepEqual(actual, undefined)
+  t.strictEqual(actual, undefined)
 })
 
 test('get last entry as latest', async () => {
   const actual = await loadInitialSnapshot(getRootDir('latest'))
-  a.satisfy(actual, {
+  a.satisfies(actual, {
     latest: {
       duration: 8828,
       numFailedTests: 0,
@@ -24,14 +25,14 @@ test('get last entry as latest', async () => {
 
 test('folder with only filtered result', async () => {
   const actual = await loadInitialSnapshot(getRootDir('filter-only'))
-  a.satisfy(actual, {
+  a.satisfies(actual, {
     full: e => e === undefined
   })
 })
 
 test('folder with no coverage result', async () => {
   const actual = await loadInitialSnapshot(getRootDir('no-coverage'))
-  a.satisfy(actual, {
+  a.satisfies(actual, {
     coverage: e => e === undefined
   })
 })
