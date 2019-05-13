@@ -1,6 +1,5 @@
 import path from 'path';
 
-const fromConfigDir = (filename: string) => path.resolve(__dirname, filename);
 
 export const jestConfig = {
   presets: 'ts-jest',
@@ -14,3 +13,5 @@ export const jestConfig = {
   ],
   setupTestFrameworkScriptFile: fromConfigDir('jest-vscode-framework-setup.js')
 };
+
+function fromConfigDir(filename: string) { return path.resolve(__dirname, filename) }

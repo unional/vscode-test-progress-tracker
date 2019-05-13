@@ -9,6 +9,7 @@ import { jestConfig } from '../jest-test-runner';
 
 
 let running = runCLI({ ...jestConfig, watch: true }, [path.resolve(__dirname, '../..')])
+
 export async function run(_testRoot: string, callback: TestRunnerCallback) {
   // Enable source map support. This is done in the original Mocha test runner,
   // so do it here. It is not clear if this is having any effect.
